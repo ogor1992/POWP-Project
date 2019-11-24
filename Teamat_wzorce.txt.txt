@@ -1,0 +1,9 @@
+Wzorce do zastosowania:
+
+ * factory method (metoda wytworcza),
+ * proxy (pelnomocnik), 
+ * publish-subscriber pattern,
+
+Temat projektu: Hosting plików
+
+Dodatkowe informacje: rabbit nq,
