@@ -7,3 +7,5 @@ Wzorce do zastosowania:
 Temat projektu: Hosting plików
 
 Dodatkowe informacje: rabbit nq,
+
+Termin oddania: 11-12.01.2020
