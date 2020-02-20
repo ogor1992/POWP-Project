@@ -23,18 +23,25 @@ namespace ClientCSharp
                 byte[] buffor = new byte[1024];
                 int result = 0;
                 String time = null;
+                Console.WriteLine("Client - exit, aby wyjsc");
+                Console.WriteLine("Client - Podaj topic:");
+                message = Console.ReadLine();
+                string sendingMessage = "topic;" + message;
+                socketClient.Send(Encoding.UTF8.GetBytes(sendingMessage));
+
+                string fileName = "C:\\Users\\eigdude\\Desktop\\test.txt";
+                Console.WriteLine("Sending {0} to the host.", fileName);
+                socketClient.SendFile(fileName);
 
                 while (power)
                 {
-                    Console.WriteLine("Client - exit, aby wyjsc");
-                    Console.WriteLine("Client - Podaj wiadomosc:");
-                    message = Console.ReadLine();
-                    socketClient.Send(Encoding.UTF8.GetBytes(message));
-                    buffor = new byte[1024];
-                    result = socketClient.Receive(buffor);
-                    time = Encoding.ASCII.GetString(buffor, 0, result);
-                    Console.WriteLine("Client - Info z servera: ");
-                    Console.WriteLine(time);
+                    //buffor = new byte[1024];
+                    //result = socketClient.Receive(buffor);
+                    //time = Encoding.ASCII.GetString(buffor, 0, result);
+                    //Console.WriteLine("Client - Info z servera: ");
+                    //Console.WriteLine(time);
+
+
                     if (message == "exit")
                     {
                         power = false;
