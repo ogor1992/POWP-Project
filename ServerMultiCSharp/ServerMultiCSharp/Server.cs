@@ -30,7 +30,7 @@ namespace ServerMultiCSharp
 
         public int initServer()
         {
-            this.listenThread = new Thread(new ThreadStart(ListenForClients));
+            this.listenThread = new Thread(new ThreadStart(listenForClients));
             this.listenThread.Start();
             this.listenThread.Join();
             return 0;
@@ -47,21 +47,18 @@ namespace ServerMultiCSharp
         public void registerSubscriber(Subscriber s, Topic t)
         {
             if(!subscriberLists.ContainsKey(t))
-            {
                 this.subscriberLists.Add(t, new List<Subscriber>());
-            }
+
             this.subscriberLists[t].Add(s);
         }
 
         public void unregisterSubscriber(Subscriber s)
         {
             foreach(var item in subscriberLists)
-            {
                 item.Value.Remove(s);
-            }
         }
 
-        private void ListenForClients()
+        private void listenForClients()
         {
             try
             {
@@ -69,27 +66,28 @@ namespace ServerMultiCSharp
             }
             catch (Exception e)
             {
-                Console.WriteLine("Server could not start. Error of binding");
+                Console.WriteLine("Server could not start. Error of binding: " + e);
                 return;
             }
-
             Console.WriteLine("Server run on port 7");
             while (true)
             {
                 TcpClient client = this.tcpListener.AcceptTcpClient();
                 Console.WriteLine("New client connected from: " + client.Client.RemoteEndPoint);
-                Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientCommunication));
+                Thread clientThread = new Thread(new ParameterizedThreadStart(handleClientCommunication));
                 clientThread.Start(client);
             }
         }
 
-        private void HandleClientCommunication(object client)
+        private void handleClientCommunication(object client)
         {
             TcpClient tcpClient = (TcpClient)client;
             String clientIP = "" + tcpClient.Client.RemoteEndPoint.AddressFamily;
             NetworkStream clientStream = tcpClient.GetStream();
             Topic receivedTopic = new Topic();
             Subscriber subscriber = new Subscriber(tcpClient.Client.RemoteEndPoint);
+            ASCIIEncoding encoder = new ASCIIEncoding();
+            byte[] requestMessage = new byte[1024];
 
             //Subscribe topic
             receivedTopic.receiveTopic(clientStream);
@@ -99,20 +97,80 @@ namespace ServerMultiCSharp
             {
                 try
                 {
-                    ASCIIEncoding encoder = new ASCIIEncoding();
-                    byte[] bByte = new byte[1024];
-                    tcpClient.Client.Receive(bByte);
-                    Console.WriteLine("Received from " + tcpClient.Client.RemoteEndPoint + "file: " + encoder.GetString(bByte, 0, 1024));
-                    string filePath = "C:\\Users\\eigdude\\Desktop\\test_received.txt";
-                    File.WriteAllBytes(filePath, bByte);
+                    int byteRead = clientStream.Read(requestMessage, 0, 1024);
+                    string requestLong = encoder.GetString(requestMessage, 0, 1024);
+                    int found = requestLong.IndexOf("@", StringComparison.Ordinal);
+                    string request = requestLong.Substring(0, found);
 
+                    Console.WriteLine("request: " + request);
+
+                    switch(request)
+                    {
+                        case "downloadFile":
+                            sendFile(tcpClient, clientStream);
+                            break;
+                        case "sendFile":
+                            receiveFile(tcpClient, clientStream);
+                            break;
+                        default:
+                            break;
+                    }
                 }
                 catch { break; }
-
-                Console.WriteLine("Topic from " + tcpClient.Client.RemoteEndPoint + ": " + receivedTopic.TopicString);
             }
             tcpClient.Close();
             subscriber.unregisterSubscriber();
+        }
+
+        private void receiveFile(TcpClient tcpClient, NetworkStream stream)
+        {
+            ASCIIEncoding encoder = new ASCIIEncoding();
+            byte[] bByte = new byte[1024];
+            byte[] messageByte = new byte[1024];
+
+            //Receive fileName
+            int byteRead = stream.Read(messageByte, 0, 1024);
+            string fileNameLong = encoder.GetString(messageByte, 0, 1024);
+            int found = fileNameLong.IndexOf("@", StringComparison.Ordinal);
+            string fileName = fileNameLong.Substring(0, found);
+
+            //Receive and save file
+            tcpClient.Client.Receive(bByte);
+            Console.WriteLine("Received from " + tcpClient.Client.RemoteEndPoint + "file: " + encoder.GetString(bByte, 0, 1024));
+            string filePath = "C:\\Users\\eigdude\\Desktop\\Received\\";
+            File.WriteAllBytes(filePath + fileName, bByte);
+        }
+
+        private void sendListOfFiles(TcpClient tcp)
+        {
+            List<string> files = new List<string>(Directory.EnumerateFiles("C:\\Users\\eigdude\\Desktop\\Received\\"));
+            string fileToSend = "";
+            foreach(string file in files)
+            {
+                fileToSend += file + "@";
+                Console.WriteLine("filesToSenddd: " + fileToSend);
+            }
+            tcp.Client.Send(Encoding.UTF8.GetBytes(fileToSend));
+        }
+
+        private void sendFile(TcpClient tcpClient, NetworkStream stream)
+        {
+            ASCIIEncoding encoder = new ASCIIEncoding();
+            byte[] bByte = new byte[1024];
+            byte[] messageByte = new byte[1024];
+
+            //Send ListOfFiles
+            sendListOfFiles(tcpClient);
+
+            //Recieve FileName
+            int byteRead = stream.Read(messageByte, 0, 1024);
+            string fileNameLong = encoder.GetString(messageByte, 0, 1024);
+            int found = fileNameLong.IndexOf("@", StringComparison.Ordinal);
+            string fileName = fileNameLong.Substring(0, found);
+            Console.WriteLine("FileName recived: " + fileName);
+
+            //Send file to client
+            tcpClient.Client.SendFile(fileName);
         }
 
     }

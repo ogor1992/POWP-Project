@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -14,39 +15,43 @@ namespace ClientCSharp
         {
             try
             {
-                Socket socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                Console.WriteLine("Client - Podaj numer portu servera:");
-                string port = Console.ReadLine();
-                socketClient.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), System.Convert.ToInt32(port)));
                 bool power = true;
-                string message = null;
                 byte[] buffor = new byte[1024];
-                int result = 0;
-                String time = null;
-                Console.WriteLine("Client - exit, aby wyjsc");
-                Console.WriteLine("Client - Podaj topic:");
-                message = Console.ReadLine();
-                string sendingMessage = "topic;" + message;
-                socketClient.Send(Encoding.UTF8.GetBytes(sendingMessage));
 
-                string fileName = "C:\\Users\\eigdude\\Desktop\\test.txt";
-                Console.WriteLine("Sending {0} to the host.", fileName);
-                socketClient.SendFile(fileName);
+                Socket socketClient = connectToServer();
+                Console.WriteLine("Client - exit, aby wyjsc");
+                Console.WriteLine("Client - Podaj temat subskrybcji:");
+                string topic = Console.ReadLine();
+                socketClient.Send(Encoding.UTF8.GetBytes(topic));
+
 
                 while (power)
                 {
-                    //buffor = new byte[1024];
-                    //result = socketClient.Receive(buffor);
-                    //time = Encoding.ASCII.GetString(buffor, 0, result);
-                    //Console.WriteLine("Client - Info z servera: ");
-                    //Console.WriteLine(time);
+                    Console.WriteLine("Podłączony do servera plików");
+                    Console.WriteLine("Aby wysłac plik wpisz 1, aby pobrać 2, wyswietlic liste plików 3:");
+                    string operation = Console.ReadLine();
 
-
-                    if (message == "exit")
+                    //string fileName = "C:\\Users\\eigdude\\Desktop\\test.txt";
+                    switch (operation)
                     {
-                        power = false;
-
+                        case "1":
+                            //Send request
+                            socketClient.Send(Encoding.UTF8.GetBytes("sendFile@"));
+                            sendFile(socketClient);
+                            break;
+                        case "2":
+                            //Send request
+                            socketClient.Send(Encoding.UTF8.GetBytes("downloadFile@"));
+                            downloadFile(socketClient);
+                            break;
+                        case "3":
+                            break;
+                        default:
+                            break;
                     }
+
+                    if (topic == "exit")
+                        power = false;
                 }
             }
             catch (SocketException ex)
@@ -55,5 +60,71 @@ namespace ClientCSharp
             }
             Console.ReadKey();
         }
+
+        private static Socket connectToServer()
+        {
+            Socket socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            Console.WriteLine("Client - Podaj numer portu servera:");
+            string port = Console.ReadLine();
+            socketClient.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), System.Convert.ToInt32(port)));
+            return socketClient;
+        }
+
+        private static void sendFile(Socket socket)
+        {
+            Console.WriteLine("Podaj pełną sciezke do pliku, który chcesz wysłać:");
+            string fileName = Console.ReadLine();
+            string filePath = "";
+            while (fileName.IndexOf("\\") > -1)
+            {
+                filePath += fileName.Substring(0, fileName.IndexOf("\\") + 1);
+                fileName = fileName.Substring(fileName.IndexOf("\\") + 1);
+            }
+            Console.WriteLine(filePath + " :: " + fileName);
+
+            Console.WriteLine("Sending {0} to the host.", fileName);
+            
+            //Send FileName
+            socket.Send(Encoding.UTF8.GetBytes(fileName+"@"));
+
+            //Send File
+            socket.SendFile(filePath+fileName);
+            Console.WriteLine("File send completed");
+        }
+
+
+        private static void downloadFile(Socket socket)
+        {
+            ASCIIEncoding encoder = new ASCIIEncoding();
+            byte[] bByte = new byte[1024];
+            byte[] messageByte = new byte[1024];
+            int size = 1024;
+
+            //Receive ListOfFiles
+            int byteRead = socket.Receive(messageByte, 0, size, 0);
+            string files = encoder.GetString(messageByte, 0, size);
+            string[] listOfFiles = files.Split('@');
+
+            Console.WriteLine("Lista plików do pobrania: ");
+            foreach(string file in listOfFiles)
+                Console.WriteLine(file);
+
+            //Send FileName
+            Console.WriteLine("Podaj pełną sciezke do pliku, który chcesz wysłać:");
+            string fileName = Console.ReadLine();
+            socket.Send(Encoding.UTF8.GetBytes(fileName + "@"));
+
+            //Receive and save file
+            while (fileName.IndexOf("\\") > -1)
+                fileName = fileName.Substring(fileName.IndexOf("\\") + 1);
+
+            socket.Receive(bByte);
+            string filePath = "C:\\Users\\eigdude\\Desktop\\Received_client\\";
+            File.WriteAllBytes(filePath + fileName, bByte);
+            Console.WriteLine("File download completed");
+        }
+
+
+
     }
 }
