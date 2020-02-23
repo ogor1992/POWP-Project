@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using System.Text;
 
 namespace ServerMultiCSharp
@@ -14,10 +15,12 @@ namespace ServerMultiCSharp
 
         public string TopicString { get => topicString; set => topicString = value; }
 
-        public void receiveTopic(TcpClient tcp)
+        public void ReceiveTopic(TcpClient tcp)
         {
             byteRead = tcp.Client.Receive(messageByte);
-            TopicString = encoder.GetString(messageByte, 0, size);
+            string topicLong = encoder.GetString(messageByte, 0, size);
+            int found = topicLong.IndexOf("@", StringComparison.Ordinal);
+            TopicString = topicLong.Substring(0, found);
         }
     }
 }

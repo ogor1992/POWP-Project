@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ClientCSharp
@@ -19,10 +20,9 @@ namespace ClientCSharp
                 byte[] buffor = new byte[1024];
 
                 Socket socketClient = ConnectToServer();
-                Console.WriteLine("Client - exit, aby wyjsc");
                 Console.WriteLine("Client - Podaj temat subskrybcji:");
                 string topic = Console.ReadLine();
-                socketClient.Send(Encoding.UTF8.GetBytes(topic));
+                socketClient.Send(Encoding.UTF8.GetBytes(topic + "@"));
 
                 while (power)
                 {
@@ -47,6 +47,18 @@ namespace ClientCSharp
                             break;
                         default:
                             break;
+                    }
+
+                    ASCIIEncoding encoder = new ASCIIEncoding();
+                    byte[] messageByte = new byte[1024];
+
+                    socketClient.Receive(messageByte);
+                    string infoLong = encoder.GetString(messageByte);
+                    int found = infoLong.IndexOf("@", StringComparison.Ordinal);
+                    string info = infoLong.Substring(0, found);
+                    if(!info.Contains("#non#"))
+                    {
+                        Console.WriteLine("Information from server:: " + info);
                     }
 
                     if (topic == "exit")

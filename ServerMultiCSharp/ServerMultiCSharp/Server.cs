@@ -21,13 +21,11 @@ namespace ServerMultiCSharp
         private TcpListener tcpListener;
 #pragma warning restore IDE0044 // Add readonly modifier
         private Thread listenThread;
-        private Dictionary<Topic, List<Subscriber>> subscriberLists;
         private static FileServer serverInstance;
         private readonly string filePath = "C:\\Users\\eigdude\\Desktop\\Received\\";
 
         private FileServer()
         {
-            this.subscriberLists = new Dictionary<Topic, List<Subscriber>>();
             this.tcpListener = new TcpListener(IPAddress.Any, 7);
         }
 
@@ -74,11 +72,14 @@ namespace ServerMultiCSharp
             String clientIP = "" + tcpClient.Client.RemoteEndPoint.AddressFamily;
             NetworkStream clientStream = tcpClient.GetStream();
             Topic receivedTopic = new Topic();
-            Subscriber subscriber = new Subscriber(tcpClient.Client.RemoteEndPoint);
+            Subscriber subscriber = new Subscriber(tcpClient);
             ASCIIEncoding encoder = new ASCIIEncoding();
+            Publisher publisher = Publisher.GetInstance();
+            Topic topic = new Topic();
 
             //Subscribe topic
-            receivedTopic.receiveTopic(tcpClient);
+            receivedTopic.ReceiveTopic(tcpClient);
+            Console.WriteLine("A:" + receivedTopic.TopicString + ":A");
             subscriber.RegisterSubscriber(receivedTopic);
 
             while (tcpClient.Connected)
@@ -90,9 +91,13 @@ namespace ServerMultiCSharp
                     {
                         case "downloadFile":
                             SendFile(tcpClient, encoder);
+                            topic.TopicString = "download";
+                            publisher.AddToPublisher("file dowloaded from serwer", topic);
                             break;
                         case "sendFile":
                             ReceiveFile(tcpClient, encoder);
+                            topic.TopicString = "upload";
+                            publisher.AddToPublisher("file uploaded to serwer", topic);
                             break;
                         default:
                             break;
@@ -142,20 +147,6 @@ namespace ServerMultiCSharp
             string requestLong = encoder.GetString(requestMessage);
             int found = requestLong.IndexOf("@", StringComparison.Ordinal);
             return requestLong.Substring(0, found);
-        }
-
-        public void RegisterSubscriber(Subscriber s, Topic t)
-        {
-            if (!subscriberLists.ContainsKey(t))
-                this.subscriberLists.Add(t, new List<Subscriber>());
-
-            this.subscriberLists[t].Add(s);
-        }
-
-        public void UnregisterSubscriber(Subscriber s)
-        {
-            foreach (var item in subscriberLists)
-                item.Value.Remove(s);
         }
     }
 }

@@ -1,23 +1,26 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 
 namespace ServerMultiCSharp
 {
     internal class Subscriber
     {
-        private readonly EndPoint endPoint;
+        private readonly TcpClient tcp;
+        public TcpClient Tcp { get => tcp;}
 
-        public Subscriber(EndPoint eP)
+        public Subscriber(TcpClient client)
         {
-            this.endPoint = eP;
+            this.tcp = client;
         }
+
         public void RegisterSubscriber(Topic t)
         {
-            FileServer.GetInstance().RegisterSubscriber(this, t);
+            Publisher.GetInstance().RegisterSubscriber(this, t);
         }
 
         public void UnregisterSubscriber()
         {
-            FileServer.GetInstance().UnregisterSubscriber(this);
+            Publisher.GetInstance().UnregisterSubscriber(this);
         }
     }
 }
