@@ -10,17 +10,20 @@ using System.Threading.Tasks;
 
 namespace ServerMultiCSharp
 {
-    interface ServerInterface
+    interface IServerInterface
     {
-        int initServer();
+        int InitServer();
     }
 
-    class FileServer : ServerInterface
+    class FileServer : IServerInterface
     {
+#pragma warning disable IDE0044 // Add readonly modifier
         private TcpListener tcpListener;
+#pragma warning restore IDE0044 // Add readonly modifier
         private Thread listenThread;
         private Dictionary<Topic, List<Subscriber>> subscriberLists;
-        public static FileServer serverInstance;
+        private static FileServer serverInstance;
+        private readonly string filePath = "C:\\Users\\eigdude\\Desktop\\Received\\";
 
         private FileServer()
         {
@@ -28,15 +31,15 @@ namespace ServerMultiCSharp
             this.tcpListener = new TcpListener(IPAddress.Any, 7);
         }
 
-        public int initServer()
+        public int InitServer()
         {
-            this.listenThread = new Thread(new ThreadStart(listenForClients));
+            this.listenThread = new Thread(new ThreadStart(ListenForClients));
             this.listenThread.Start();
             this.listenThread.Join();
             return 0;
         }
 
-        public static FileServer getInstance()
+        public static FileServer GetInstance()
         {
             if(serverInstance == null)
                 serverInstance = new FileServer();
@@ -44,21 +47,7 @@ namespace ServerMultiCSharp
             return serverInstance;
         }
 
-        public void registerSubscriber(Subscriber s, Topic t)
-        {
-            if(!subscriberLists.ContainsKey(t))
-                this.subscriberLists.Add(t, new List<Subscriber>());
-
-            this.subscriberLists[t].Add(s);
-        }
-
-        public void unregisterSubscriber(Subscriber s)
-        {
-            foreach(var item in subscriberLists)
-                item.Value.Remove(s);
-        }
-
-        private void listenForClients()
+        private void ListenForClients()
         {
             try
             {
@@ -74,12 +63,12 @@ namespace ServerMultiCSharp
             {
                 TcpClient client = this.tcpListener.AcceptTcpClient();
                 Console.WriteLine("New client connected from: " + client.Client.RemoteEndPoint);
-                Thread clientThread = new Thread(new ParameterizedThreadStart(handleClientCommunication));
+                Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientCommunication));
                 clientThread.Start(client);
             }
         }
 
-        private void handleClientCommunication(object client)
+        private void HandleClientCommunication(object client)
         {
             TcpClient tcpClient = (TcpClient)client;
             String clientIP = "" + tcpClient.Client.RemoteEndPoint.AddressFamily;
@@ -87,30 +76,23 @@ namespace ServerMultiCSharp
             Topic receivedTopic = new Topic();
             Subscriber subscriber = new Subscriber(tcpClient.Client.RemoteEndPoint);
             ASCIIEncoding encoder = new ASCIIEncoding();
-            byte[] requestMessage = new byte[1024];
 
             //Subscribe topic
-            receivedTopic.receiveTopic(clientStream);
-            subscriber.registerSubscriber(receivedTopic);
+            receivedTopic.receiveTopic(tcpClient);
+            subscriber.RegisterSubscriber(receivedTopic);
 
             while (tcpClient.Connected)
             {
                 try
                 {
-                    int byteRead = clientStream.Read(requestMessage, 0, 1024);
-                    string requestLong = encoder.GetString(requestMessage, 0, 1024);
-                    int found = requestLong.IndexOf("@", StringComparison.Ordinal);
-                    string request = requestLong.Substring(0, found);
-
-                    Console.WriteLine("request: " + request);
-
+                    string request = GetMessage(tcpClient, encoder);
                     switch(request)
                     {
                         case "downloadFile":
-                            sendFile(tcpClient, clientStream);
+                            SendFile(tcpClient, encoder);
                             break;
                         case "sendFile":
-                            receiveFile(tcpClient, clientStream);
+                            ReceiveFile(tcpClient, encoder);
                             break;
                         default:
                             break;
@@ -119,59 +101,61 @@ namespace ServerMultiCSharp
                 catch { break; }
             }
             tcpClient.Close();
-            subscriber.unregisterSubscriber();
+            subscriber.UnregisterSubscriber();
         }
 
-        private void receiveFile(TcpClient tcpClient, NetworkStream stream)
+        private void ReceiveFile(TcpClient tcp, ASCIIEncoding encoder)
         {
-            ASCIIEncoding encoder = new ASCIIEncoding();
             byte[] bByte = new byte[1024];
-            byte[] messageByte = new byte[1024];
-
             //Receive fileName
-            int byteRead = stream.Read(messageByte, 0, 1024);
-            string fileNameLong = encoder.GetString(messageByte, 0, 1024);
-            int found = fileNameLong.IndexOf("@", StringComparison.Ordinal);
-            string fileName = fileNameLong.Substring(0, found);
-
+            string fileName = GetMessage(tcp, encoder);
             //Receive and save file
-            tcpClient.Client.Receive(bByte);
-            Console.WriteLine("Received from " + tcpClient.Client.RemoteEndPoint + "file: " + encoder.GetString(bByte, 0, 1024));
-            string filePath = "C:\\Users\\eigdude\\Desktop\\Received\\";
+            tcp.Client.Receive(bByte);
             File.WriteAllBytes(filePath + fileName, bByte);
         }
 
-        private void sendListOfFiles(TcpClient tcp)
+        private void SendListOfFiles(TcpClient tcp)
         {
-            List<string> files = new List<string>(Directory.EnumerateFiles("C:\\Users\\eigdude\\Desktop\\Received\\"));
+            List<string> files = new List<string>(Directory.EnumerateFiles(filePath));
             string fileToSend = "";
             foreach(string file in files)
-            {
                 fileToSend += file + "@";
-                Console.WriteLine("filesToSenddd: " + fileToSend);
-            }
+
             tcp.Client.Send(Encoding.UTF8.GetBytes(fileToSend));
         }
 
-        private void sendFile(TcpClient tcpClient, NetworkStream stream)
+        private void SendFile(TcpClient tcp, ASCIIEncoding encoder)
         {
-            ASCIIEncoding encoder = new ASCIIEncoding();
-            byte[] bByte = new byte[1024];
-            byte[] messageByte = new byte[1024];
-
             //Send ListOfFiles
-            sendListOfFiles(tcpClient);
-
-            //Recieve FileName
-            int byteRead = stream.Read(messageByte, 0, 1024);
-            string fileNameLong = encoder.GetString(messageByte, 0, 1024);
-            int found = fileNameLong.IndexOf("@", StringComparison.Ordinal);
-            string fileName = fileNameLong.Substring(0, found);
-            Console.WriteLine("FileName recived: " + fileName);
-
+            SendListOfFiles(tcp);
+            //Receieve FileName
+            string fileName = GetMessage(tcp, encoder);
             //Send file to client
-            tcpClient.Client.SendFile(fileName);
+            tcp.Client.SendFile(fileName);
         }
 
+        private string GetMessage(TcpClient tcp, ASCIIEncoding encoder)
+        {
+            byte[] requestMessage = new byte[1024];
+
+            int byteRead = tcp.Client.Receive(requestMessage);
+            string requestLong = encoder.GetString(requestMessage);
+            int found = requestLong.IndexOf("@", StringComparison.Ordinal);
+            return requestLong.Substring(0, found);
+        }
+
+        public void RegisterSubscriber(Subscriber s, Topic t)
+        {
+            if (!subscriberLists.ContainsKey(t))
+                this.subscriberLists.Add(t, new List<Subscriber>());
+
+            this.subscriberLists[t].Add(s);
+        }
+
+        public void UnregisterSubscriber(Subscriber s)
+        {
+            foreach (var item in subscriberLists)
+                item.Value.Remove(s);
+        }
     }
 }

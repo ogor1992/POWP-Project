@@ -14,9 +14,9 @@ namespace ServerMultiCSharp
 
         public string TopicString { get => topicString; set => topicString = value; }
 
-        public void receiveTopic(NetworkStream clientStream)
+        public void receiveTopic(TcpClient tcp)
         {
-            byteRead = clientStream.Read(messageByte, 0, size);
+            byteRead = tcp.Client.Receive(messageByte);
             TopicString = encoder.GetString(messageByte, 0, size);
         }
     }

@@ -14,7 +14,7 @@ namespace ServerMultiCSharp
         static void Main(string[] args)
         {
             Proxy proxy = new Proxy();
-            proxy.initServer();
+            proxy.InitServer();
         }
     }
 }

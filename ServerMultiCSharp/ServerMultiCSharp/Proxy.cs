@@ -6,19 +6,19 @@ using System.Threading.Tasks;
 
 namespace ServerMultiCSharp
 {
-    class Proxy : ServerInterface
+    class Proxy : IServerInterface
     {
-        private ServerInterface fileServer;
+        private IServerInterface fileServer;
 
         private void getInstanceOfServer()
         {
-            fileServer = FileServer.getInstance();
+            fileServer = FileServer.GetInstance();
         }
 
-        public int initServer()
+        public int InitServer()
         {
             getInstanceOfServer();
-            return fileServer.initServer();
+            return fileServer.InitServer();
         }
     }
 }

@@ -4,21 +4,20 @@ namespace ServerMultiCSharp
 {
     internal class Subscriber
     {
-        private EndPoint endPoint;
-        private Topic topic;
+        private readonly EndPoint endPoint;
 
         public Subscriber(EndPoint eP)
         {
             this.endPoint = eP;
         }
-        public void registerSubscriber(Topic t)
+        public void RegisterSubscriber(Topic t)
         {
-            FileServer.getInstance().registerSubscriber(this, t);
+            FileServer.GetInstance().RegisterSubscriber(this, t);
         }
 
-        public void unregisterSubscriber()
+        public void UnregisterSubscriber()
         {
-            FileServer.getInstance().unregisterSubscriber(this);
+            FileServer.GetInstance().UnregisterSubscriber(this);
         }
     }
 }
