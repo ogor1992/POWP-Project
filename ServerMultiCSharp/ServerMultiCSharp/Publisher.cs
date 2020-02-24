@@ -29,7 +29,7 @@ namespace ServerMultiCSharp
         {
             foreach (Topic topic in subscriberLists.Keys)
             {
-                if (topic.TopicString.Equals(t.TopicString))
+                if (topic.TopicName.Equals(t.TopicName))
                 {
                     foreach(Subscriber subscriber in subscriberLists[topic])
                     {

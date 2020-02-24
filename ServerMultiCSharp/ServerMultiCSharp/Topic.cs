@@ -1,26 +1,66 @@
-﻿using System;
+﻿using ServerMultiCSharp;
+using System;
 using System.Net.Sockets;
 using System.Text;
 
 namespace ServerMultiCSharp
 {
-    public class Topic
+    public abstract class Topic
     {
-        ASCIIEncoding encoder = new ASCIIEncoding();
-        private readonly int size = 1024;
-        private readonly byte[] messageByte = new byte[1024];
+        public string TopicName { get; set; }
+    }
 
-        private int byteRead;
-        private string topicString;
 
-        public string TopicString { get => topicString; set => topicString = value; }
 
-        public void ReceiveTopic(TcpClient tcp)
+    public class DownloadTopic : Topic
+    {
+        public DownloadTopic()
         {
-            byteRead = tcp.Client.Receive(messageByte);
-            string topicLong = encoder.GetString(messageByte, 0, size);
-            int found = topicLong.IndexOf("@", StringComparison.Ordinal);
-            TopicString = topicLong.Substring(0, found);
+            TopicName = "download";
+        }
+    }
+    public class UploadTopic : Topic
+    {
+        public UploadTopic()
+        {
+            TopicName = "upload";
+        }
+    }
+
+
+    public class DownloadFactory
+    {
+        public Topic CreateTopic()
+        {
+            return new DownloadTopic();
+        }
+    }
+
+    public class UploadFactory
+    {
+        public Topic CreateTopic()
+        {
+            return new UploadTopic();
+
+        }
+    }
+
+    public class TopicCreator
+    {
+        public Topic CreateTopic(string type)
+        {
+            Topic topic = null;
+            switch (type)
+            {
+                case "download":
+                    topic = new DownloadTopic();
+                    break;
+                case "upload":
+                    topic = new UploadTopic();
+                    break;
+            }
+            return topic;
         }
     }
 }
+

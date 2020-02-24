@@ -71,16 +71,27 @@ namespace ServerMultiCSharp
             TcpClient tcpClient = (TcpClient)client;
             String clientIP = "" + tcpClient.Client.RemoteEndPoint.AddressFamily;
             NetworkStream clientStream = tcpClient.GetStream();
-            Topic receivedTopic = new Topic();
             Subscriber subscriber = new Subscriber(tcpClient);
             ASCIIEncoding encoder = new ASCIIEncoding();
             Publisher publisher = Publisher.GetInstance();
-            Topic topic = new Topic();
+            var topicCreator = new TopicCreator();
+            Topic topic;
 
             //Subscribe topic
-            receivedTopic.ReceiveTopic(tcpClient);
-            Console.WriteLine("A:" + receivedTopic.TopicString + ":A");
-            subscriber.RegisterSubscriber(receivedTopic);
+            string requestTopic = GetMessage(tcpClient, encoder);
+            switch (requestTopic)
+            {
+                case "download":
+                    topic = topicCreator.CreateTopic("download");
+                    break;
+                case "upload":
+                    topic = topicCreator.CreateTopic("upload");
+                    break;
+                default:
+                    topic = topicCreator.CreateTopic("download");
+                    break;
+            }
+            subscriber.RegisterSubscriber(topic);
 
             while (tcpClient.Connected)
             {
@@ -91,12 +102,10 @@ namespace ServerMultiCSharp
                     {
                         case "downloadFile":
                             SendFile(tcpClient, encoder);
-                            topic.TopicString = "download";
                             publisher.AddToPublisher("file dowloaded from serwer", topic);
                             break;
                         case "sendFile":
                             ReceiveFile(tcpClient, encoder);
-                            topic.TopicString = "upload";
                             publisher.AddToPublisher("file uploaded to serwer", topic);
                             break;
                         default:
