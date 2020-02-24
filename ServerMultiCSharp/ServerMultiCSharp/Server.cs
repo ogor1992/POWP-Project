@@ -81,14 +81,14 @@ namespace ServerMultiCSharp
             string requestTopic = GetMessage(tcpClient, encoder);
             switch (requestTopic)
             {
-                case "download":
-                    topic = topicCreator.CreateTopic("download");
+                case "1":
+                    topic = topicCreator.CreateTopic(1);
                     break;
-                case "upload":
-                    topic = topicCreator.CreateTopic("upload");
+                case "2":
+                    topic = topicCreator.CreateTopic(2);
                     break;
                 default:
-                    topic = topicCreator.CreateTopic("download");
+                    topic = topicCreator.CreateTopic(1);
                     break;
             }
             subscriber.RegisterSubscriber(topic);
@@ -102,10 +102,12 @@ namespace ServerMultiCSharp
                     {
                         case "downloadFile":
                             SendFile(tcpClient, encoder);
+                            topic = topicCreator.CreateTopic(1);
                             publisher.AddToPublisher("file dowloaded from serwer", topic);
                             break;
                         case "sendFile":
                             ReceiveFile(tcpClient, encoder);
+                            topic = topicCreator.CreateTopic(2);
                             publisher.AddToPublisher("file uploaded to serwer", topic);
                             break;
                         default:

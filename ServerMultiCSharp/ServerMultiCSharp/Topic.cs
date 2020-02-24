@@ -10,8 +10,6 @@ namespace ServerMultiCSharp
         public string TopicName { get; set; }
     }
 
-
-
     public class DownloadTopic : Topic
     {
         public DownloadTopic()
@@ -41,21 +39,20 @@ namespace ServerMultiCSharp
         public Topic CreateTopic()
         {
             return new UploadTopic();
-
         }
     }
 
     public class TopicCreator
     {
-        public Topic CreateTopic(string type)
+        public Topic CreateTopic(int type)
         {
             Topic topic = null;
             switch (type)
             {
-                case "download":
+                case 1:
                     topic = new DownloadTopic();
                     break;
-                case "upload":
+                case 2:
                     topic = new UploadTopic();
                     break;
             }

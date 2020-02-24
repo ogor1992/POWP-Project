@@ -8,10 +8,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+//string fileName = "C:\\Users\\eigdude\\Desktop\\test.txt";
+
 namespace ClientCSharp
 {
     class Program
     {
+        private static readonly string filePath = "C:\\Users\\eigdude\\Desktop\\Received_client\\";
         static void Main(string[] args)
         {
             try
@@ -20,30 +23,33 @@ namespace ClientCSharp
                 byte[] buffor = new byte[1024];
 
                 Socket socketClient = ConnectToServer();
-                Console.WriteLine("Client - Podaj temat subskrybcji:");
-                string topic = Console.ReadLine();
+                string topic = "";
+                while(!((topic.Equals("1")) || (topic.Equals("2"))))
+                {
+                    Console.WriteLine("Podaj temat subskrybcji (1 - subskrybcja pobierania, 2 - subskrybcja wysyłania:");
+                    topic = Console.ReadLine();
+                    Console.WriteLine("Wybor:" + topic + "::");
+                }
                 socketClient.Send(Encoding.UTF8.GetBytes(topic + "@"));
 
                 while (power)
                 {
-                    Console.WriteLine("Podłączony do servera plików");
-                    Console.WriteLine("Aby wysłac plik wpisz 1, aby pobrać 2, wyswietlic liste plików 3:");
-                    string operation = Console.ReadLine();
+                    string operation = "";
+                    while (!((operation.Equals("1")) || (operation.Equals("2"))))
+                    {
+                        Console.WriteLine("Aby wysłac plik wpisz 1, aby pobrać 2");
+                        operation = Console.ReadLine();
+                    }
 
-                    //string fileName = "C:\\Users\\eigdude\\Desktop\\test.txt";
                     switch (operation)
                     {
                         case "1":
-                            //Send request
                             socketClient.Send(Encoding.UTF8.GetBytes("sendFile@"));
                             SendFile(socketClient);
                             break;
                         case "2":
-                            //Send request
                             socketClient.Send(Encoding.UTF8.GetBytes("downloadFile@"));
                             DownloadFile(socketClient);
-                            break;
-                        case "3":
                             break;
                         default:
                             break;
@@ -75,7 +81,7 @@ namespace ClientCSharp
         private static Socket ConnectToServer()
         {
             Socket socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            Console.WriteLine("Client - Podaj numer portu servera:");
+            Console.WriteLine("Podaj numer portu servera:");
             string port = Console.ReadLine();
             socketClient.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), System.Convert.ToInt32(port)));
             return socketClient;
@@ -106,11 +112,10 @@ namespace ClientCSharp
             ASCIIEncoding encoder = new ASCIIEncoding();
             byte[] bByte = new byte[1024];
             byte[] messageByte = new byte[1024];
-            int size = 1024;
 
             //Receive ListOfFiles
-            int byteRead = socket.Receive(messageByte, 0, size, 0);
-            string files = encoder.GetString(messageByte, 0, size);
+            socket.Receive(messageByte);
+            string files = encoder.GetString(messageByte);
             string[] listOfFiles = files.Split('@');
 
             Console.WriteLine("Lista plików do pobrania: ");
@@ -118,7 +123,7 @@ namespace ClientCSharp
                 Console.WriteLine(file);
 
             //Send FileName
-            Console.WriteLine("Podaj pełną sciezke do pliku, który chcesz wysłać:");
+            Console.WriteLine("Podaj pełną sciezke do pliku, który chcesz pobrać:");
             string fileName = Console.ReadLine();
             socket.Send(Encoding.UTF8.GetBytes(fileName + "@"));
 
@@ -127,7 +132,6 @@ namespace ClientCSharp
                 fileName = fileName.Substring(fileName.IndexOf("\\") + 1);
 
             socket.Receive(bByte);
-            string filePath = "C:\\Users\\eigdude\\Desktop\\Received_client\\";
             File.WriteAllBytes(filePath + fileName, bByte);
             Console.WriteLine("File download completed");
         }
